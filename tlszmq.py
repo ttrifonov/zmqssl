@@ -23,9 +23,8 @@ class TLSZmq(object):
             self.type = 'Server'
             # Server constructor
             self.ctx.load_cert(cert, keyfile=key)
-            #self.ctx.load_verify_locations(cert)
-            #self.ctx.load_verify_locations(cert)
         else:
+            # Client constructor
             self.type = 'Client'
 
         #self.ctx.set_verify(m.SSL.verify_peer |
@@ -33,10 +32,9 @@ class TLSZmq(object):
         #                    self.DEPTH, vf_callback)
         self.ctx.set_verify(m.SSL.verify_none, self.DEPTH, vf_callback)
         self.init_ssl()
-        if cert:
+        if self.type == 'Server':
             self.ssl.set_accept_state()
         else:
-            # Client constructor
             self.ssl.set_connect_state()
 
     def init_ctx(self):
@@ -67,20 +65,24 @@ class TLSZmq(object):
         self.net_read()
         self.net_write()
 
-    def continue_ssl(self, rc):
-        err = self.ssl.ssl_get_error(rc)
-        print err
+    def continue_ssl(self):
+        # Not sure how to read the error here..
+        #err = m.m2.err_get_error() ??
+        #if err != ????
+        #    self.LOG.error(err)
+        #    return False
+        return True
 
     def net_read(self):
         while True:
             rc = self.ssl.read(self.BUF_LEN)
             if rc is None:
                 break
-            #self.continue_ssl(rc)
+            if not self.continue_ssl():
+                raise Exception('SSL Error')
             self.ssl_to_app.write(rc)
 
     def net_write(self):
-        #self.ssl_to_zmq.truncate(0)
         while True:
             read = self.wbio.read()
             if read is None:
@@ -102,11 +104,9 @@ class TLSZmq(object):
         return self.flush(self.ssl_to_zmq)
 
     def put_data(self, data):
-        #self.zmq_to_ssl.truncate(0)
         self.zmq_to_ssl.write(data)
 
     def send(self, data):
-        #self.app_to_ssl.truncate(0)
         self.app_to_ssl.write(data)
 
     def flush(self, io):
