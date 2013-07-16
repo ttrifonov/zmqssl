@@ -4,6 +4,8 @@ from StringIO import StringIO
 import threading
 import zmq
 
+from TLSZMQ import TLSZmq
+
 FORMAT = "%(name)s %(message)s"
 logging.basicConfig(format=FORMAT)
 
@@ -37,7 +39,7 @@ def client_thread():
     socket = ctx.socket(zmq.REQ)
     socket.connect('tcp://localhost:5556')
 
-    tls = TLSZmq()
+    tls = TLSZmq(LOGC)
 
     tls.send('Hello world !!!')
 
@@ -75,7 +77,7 @@ def server_thread(cert, key):
             #enc_req = socket.recv()
             #ident = 1
             if ident not in conns:
-                conns[ident] = TLSZmq(cert, key)
+                conns[ident] = TLSZmq(LOGS, cert, key)
             tls = conns[ident]
             tls.put_data(enc_req)
             tls.update()
@@ -98,126 +100,6 @@ def server_thread(cert, key):
 
     tls.shutdown()        
     LOGS.info("Server exited")
-
-
-class TLSZmq(object):
-
-    def __init__(self, cert=None, key=None):
-        self.DEPTH = 5
-        self.BUF_LEN = 1024
-        
-        self.init_ctx()
-        self.ctx.set_allow_unknown_ca(True)
-
-        def vf_callback(ctx, cert, a, b, ok):
-            return ok
-
-        if cert:
-            self.type = 'Server'
-            # Server constructor
-            self.ctx.load_cert(cert, keyfile=key)
-            #self.ctx.load_verify_locations(cert)
-            #self.ctx.load_verify_locations(cert)
-        else:
-            self.type = 'Client'
-
-        #self.ctx.set_verify(m.SSL.verify_peer |
-        #                    m.SSL.verify_fail_if_no_peer_cert,
-        #                    self.DEPTH, vf_callback)
-        self.ctx.set_verify(m.SSL.verify_none, self.DEPTH, vf_callback)
-        self.init_ssl()
-        if cert:
-            self.ssl.set_accept_state()
-        else:
-            # Client constructor
-            self.ssl.set_connect_state()
-
-    @property
-    def LOG(self):
-        if self.type == 'Server':
-            return LOGS
-        else:
-            return LOGC
-
-    def init_ctx(self):
-        self.ctx = m.SSL.Context(PROTOCOL)
-
-    def init_ssl(self):
-        self.rbio = m.BIO.MemoryBuffer()
-        self.wbio = m.BIO.MemoryBuffer()
-
-        self.ssl = m.SSL.Connection(self.ctx)
-        self.ssl.set_bio(self.rbio, self.wbio)
-
-        self.app_to_ssl = StringIO()
-        self.ssl_to_zmq = StringIO()
-        self.zmq_to_ssl = StringIO()
-        self.ssl_to_app = StringIO()
-
-    def update(self):
-        if self.zmq_to_ssl.len:
-            rc = self.rbio.write(self.flush(self.zmq_to_ssl))
-            self.LOG.info('%s written to BIO' % (rc))
-        if self.app_to_ssl.len:
-            rc = self.ssl.write(self.app_to_ssl.getvalue())
-            if rc == self.app_to_ssl.len:
-                self.app_to_ssl.truncate(0)
-            self.LOG.info("%s written to SSL" % (rc))
-
-        self.net_read()
-        self.net_write()
-
-    def continue_ssl(self, rc):
-        err = self.ssl.ssl_get_error(rc)
-        print err
-
-    def net_read(self):
-        while True:
-            rc = self.ssl.read(self.BUF_LEN)
-            if rc is None:
-                break
-            #self.continue_ssl(rc)
-            self.ssl_to_app.write(rc)
-
-    def net_write(self):
-        #self.ssl_to_zmq.truncate(0)
-        while True:
-            read = self.wbio.read()
-            if read is None:
-                break
-            self.ssl_to_zmq.write(read)
-        if self.ssl_to_zmq.len:
-            self.LOG.info("%s read from BIO" % (self.ssl_to_zmq.len))
-
-    def can_recv(self):
-        return self.ssl_to_app.len
-
-    def needs_write(self):
-        return self.ssl_to_zmq.len
-
-    def recv(self):
-        return self.flush(self.ssl_to_app)
-
-    def get_data(self):
-        return self.flush(self.ssl_to_zmq)
-
-    def put_data(self, data):
-        #self.zmq_to_ssl.truncate(0)
-        self.zmq_to_ssl.write(data)
-
-    def send(self, data):
-        #self.app_to_ssl.truncate(0)
-        self.app_to_ssl.write(data)
-
-    def flush(self, io):
-        ret = io.getvalue()
-        io.truncate(0)
-        return ret
-
-    def shutdown(self):
-        self.ssl.close()
-        self.ctx.close()
-        self.ssl.shutdown(m.SSL.SSL_RECEIVED_SHUTDOWN | m.SSL.SSL_SENT_SHUTDOWN)
 
 
 if __name__ == '__main__':
