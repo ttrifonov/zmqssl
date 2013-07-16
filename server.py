@@ -8,7 +8,7 @@ class ZMQTLSServer(Thread):
     def __init__(self, log, uri, proto, cert, key):
         super(ZMQTLSServer, self).__init__()
         ctx = zmq.Context()
-        self.socket = ctx.socket(zmq.ROUTER)  # or zmq.REP
+        self.socket = ctx.socket(zmq.ROUTER)  # or zmq.REP, or zmq.DEALER
         self.socket.bind(uri)
         self.proto = proto
         self.LOG = log
@@ -18,12 +18,19 @@ class ZMQTLSServer(Thread):
     def run(self):
 
         conns = {}
+        _ = ''
+        ident = 1
         try:
             while True:
-                (ident, _, enc_req) = self.socket.recv_multipart()
-                # For REP socket, just recv()
-                #enc_req = self.socket.recv()
-                #ident = 1
+                if self.socket.type == zmq.ROUTER:
+                    (ident, _, enc_req) = self.socket.recv_multipart()
+                elif self.socket.type == zmq.DEALER:
+                    (ident, enc_req) = self.socket.recv_multipart()
+                elif self.socket.type == zmq.REP:
+                    enc_req = self.socket.recv()
+                else:
+                    raise Exception('Unsupported socket type: %s' %
+                                    self.socket.type)
                 if ident not in conns:
                     conns[ident] = TLSZmq(self.LOG, self.proto,
                                           self.cert, self.key)
@@ -41,9 +48,12 @@ class ZMQTLSServer(Thread):
 
                 if tls.needs_write():
                     enc_rep = tls.get_data()
-                    self.socket.send_multipart([ident, _, enc_rep])
-                    # For REP socket, just send()
-                    #self.socket.send(enc_rep)
+                    if self.socket.type == zmq.ROUTER:
+                        self.socket.send_multipart([ident, _, enc_rep])
+                    elif self.socket.type == zmq.DEALER:
+                        self.socket.send_multipart([ident, enc_rep])
+                    elif self.socket.type == zmq.REP:
+                        self.socket.send(enc_rep)
         except Exception, ex:
             self.LOG.exception(ex)
 
