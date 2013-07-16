@@ -19,7 +19,11 @@ over classic sockets and cannot negotiate with multiple endpoints.
 Usage
 ======
 
-see `main.py`
+Run
+
+`python main.py`
+
+or see contents of `main.py`
 
 
 ```python
