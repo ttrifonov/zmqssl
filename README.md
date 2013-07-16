@@ -1,12 +1,14 @@
 zmqssl
 ======
 
-SSL/TLS wrapper for ZMQ sockets
+SSL/TLS wrapper for ZMQ socketsu using M2Crypto
 
-Python implementation of the nice example given from Ian Barber:
+Python implementation of the nice C++ example given by Ian Barber:
 http://www.riskcompletefailure.com/2012/09/tls-and-zeromq.html
+https://github.com/ianbarber/TLSZMQ
 
-Can be used for REQ-REP and REQ-ROUTER sockets (and probably DEALERs).
+
+Can be used for REQ-REP and REQ-ROUTER sockets (and probably DEALER sockets).
 Cannot be used for PUB-SUB sockets as SSL/TLS is
 end-to-end protocol, while zmq sockets are an abstraction
 over classic sockets and cannot negotiate with multiple endpoints.
@@ -14,6 +16,8 @@ over classic sockets and cannot negotiate with multiple endpoints.
 
 Usage
 ======
+
+see `main.py`
 
 
 ```python
