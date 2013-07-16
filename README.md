@@ -1,7 +1,7 @@
 zmqssl
 ======
 
-SSL/TLS wrapper for ZMQ socketsu using M2Crypto
+SSL/TLS wrapper for ZMQ sockets using M2Crypto
 
 Python implementation of the nice C++ example given by Ian Barber:
 
