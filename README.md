@@ -4,8 +4,10 @@ zmqssl
 SSL/TLS wrapper for ZMQ socketsu using M2Crypto
 
 Python implementation of the nice C++ example given by Ian Barber:
-http://www.riskcompletefailure.com/2012/09/tls-and-zeromq.html
-https://github.com/ianbarber/TLSZMQ
+
+- http://www.riskcompletefailure.com/2012/09/tls-and-zeromq.html
+
+- https://github.com/ianbarber/TLSZMQ
 
 
 Can be used for REQ-REP and REQ-ROUTER sockets (and probably DEALER sockets).
@@ -29,7 +31,6 @@ PROTOCOL = 'sslv3'  # or 'tlsv1'
 
 from server import ZMQTLSServer
 from client import ZMQTLSClient
-
 
 cert, key = ('server.crt', 'server.key')
 socket_uri = 'tcp://0.0.0.0:5556'
