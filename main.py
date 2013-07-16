@@ -26,8 +26,8 @@ def Main():
     server.start()
     client.start()
 
-    #server.join()
-    #client.join()
+    client.join()
+    server.join()
 
 
 if __name__ == '__main__':

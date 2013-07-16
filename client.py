@@ -1,6 +1,6 @@
 import zmq
 from threading import Thread
-from TLSZMQ import TLSZmq
+from tlszmq import TLSZmq
 
 
 class ZMQTLSClient(Thread):
