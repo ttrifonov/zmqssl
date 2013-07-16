@@ -10,7 +10,7 @@ Python implementation of the nice C++ example given by Ian Barber:
 - https://github.com/ianbarber/TLSZMQ
 
 
-Can be used for REQ-REP and REQ-ROUTER sockets (and probably DEALER sockets).
+Can be used for REQ-REP and REQ-ROUTER and REQ-DEALER sockets.
 Cannot be used for PUB-SUB sockets as SSL/TLS is
 end-to-end protocol, while zmq sockets are an abstraction
 over classic sockets and cannot negotiate with multiple endpoints.
