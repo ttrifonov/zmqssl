@@ -5,19 +5,20 @@ from tlszmq import TLSZmq
 
 class ZMQTLSClient(Thread):
 
-    def __init__(self, log, uri, proto):
+    def __init__(self, name, log, uri, proto):
         super(ZMQTLSClient, self).__init__()
         ctx = zmq.Context()
 
         self.socket = ctx.socket(zmq.REQ)
+        self.name = name
+        self.socket.setsockopt(zmq.IDENTITY, self.name)
         self.socket.connect(uri)
         self.LOG = log
         self.proto = proto
 
     def run(self):
-        tls = TLSZmq(self.LOG, self.proto)
-
-        tls.send('Hello world !!!')
+        tls = TLSZmq(self.name, self.LOG, self.proto)
+        tls.send(self.name)
 
         while True:
             tls.update()

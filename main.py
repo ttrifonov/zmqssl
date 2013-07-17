@@ -1,13 +1,21 @@
 import logging
+import signal
 from StringIO import StringIO
 
 FORMAT = "%(name)s %(message)s"
 logging.basicConfig(format=FORMAT)
 
 LOGS = logging.getLogger('SERVER')
-LOGC = logging.getLogger('CLIENT')
 LOGS.setLevel(logging.DEBUG)
-LOGC.setLevel(logging.DEBUG)
+
+LOGC1 = logging.getLogger('CLIENT')
+LOGC1.setLevel(logging.DEBUG)
+
+LOGC2 = logging.getLogger('CLIENT2')
+LOGC2.setLevel(logging.DEBUG)
+
+LOGC3 = logging.getLogger('CLIENT3')
+LOGC3.setLevel(logging.DEBUG)
 
 PROTOCOL = 'sslv3'  # or 'tlsv1'
 
@@ -21,13 +29,25 @@ def Main():
     socket_uri = 'tcp://0.0.0.0:5556'
 
     server = ZMQTLSServer(LOGS, socket_uri, PROTOCOL, cert, key)
-    client = ZMQTLSClient(LOGC, socket_uri, PROTOCOL)
+    client1 = ZMQTLSClient('client1', LOGC1, socket_uri, PROTOCOL)
+    client2 = ZMQTLSClient('client2', LOGC2, socket_uri, PROTOCOL)
+    client3 = ZMQTLSClient('000012345678901234561234567890123456', LOGC3, socket_uri, PROTOCOL)
+
+    def on_close(sig, frame):
+        print "Interrupt"
+        server.terminate()
+
+    signal.signal(signal.SIGINT, on_close)
 
     server.start()
-    client.start()
+    client1.start()
+    client2.start()
+    client3.start()
 
-    client.join()
-    server.join()
+    client1.join()
+    client2.join()
+    client3.join()
+    #server.join()
 
 
 if __name__ == '__main__':
