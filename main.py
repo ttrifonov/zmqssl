@@ -1,5 +1,4 @@
 import logging
-import signal
 from StringIO import StringIO
 
 FORMAT = "%(name)s %(message)s"
@@ -33,12 +32,6 @@ def Main():
     client2 = ZMQTLSClient('client2', LOGC2, socket_uri, PROTOCOL)
     client3 = ZMQTLSClient('000012345678901234561234567890123456', LOGC3, socket_uri, PROTOCOL)
 
-    def on_close(sig, frame):
-        print "Interrupt"
-        server.terminate()
-
-    signal.signal(signal.SIGINT, on_close)
-
     server.start()
     client1.start()
     client2.start()
@@ -47,7 +40,7 @@ def Main():
     client1.join()
     client2.join()
     client3.join()
-    #server.join()
+    server.join()
 
 
 if __name__ == '__main__':
