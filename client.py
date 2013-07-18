@@ -1,41 +1,75 @@
-import zmq
+import time
 from threading import Thread
 from tlszmq import TLSZmq
+import zmq
+
+
+class SSLWrapper(object):
+    def __init__(self, zmqsocket, name, log, proto, cert, key):
+        self.socket = zmqsocket
+        self.tls = TLSZmq(name, log, proto, cert, key)
+        self.LOG = log
+
+    def send_recv(self, value):
+        try:
+            self.tls.send(value)
+            while True:
+                self.tls.update()
+
+                if self.tls.needs_write():
+                    enc_msg = self.tls.get_data()
+                    self.socket.send(enc_msg)
+
+                    enc_req = self.socket.recv()
+                    self.tls.put_data(enc_req)
+                    self.tls.update()
+            
+                if self.tls.can_recv(): 
+                    return self.tls.recv()
+                    break
+        except Exception, ex:
+            self.LOG.exception(ex)
+
+    def shutdown(self):
+        self.tls.shutdown()
 
 
 class ZMQTLSClient(Thread):
 
-    def __init__(self, name, log, uri, proto):
+    def __init__(self, name, log, uri, proto, ctx, cert=None, key=None):
         super(ZMQTLSClient, self).__init__()
-        ctx = zmq.Context()
 
-        self.socket = ctx.socket(zmq.REQ)
         self.name = name
-        self.socket.setsockopt(zmq.IDENTITY, self.name)
-        self.socket.connect(uri)
         self.LOG = log
         self.proto = proto
+        self.cert = cert
+        self.key = key
+        self.uri = uri
+        self.ctx = ctx
 
     def run(self):
-        tls = TLSZmq(self.name, self.LOG, self.proto)
-        tls.send(self.name)
+        subclients = 8
 
-        while True:
-            tls.update()
+        for sub in range(subclients):
+            ident = self.name + '____' + str(sub)
+            self.socket = self.ctx.socket(zmq.REQ)
+            self.socket.connect(self.uri)
+            self.socket.setsockopt(zmq.IDENTITY, ident)
 
-            if tls.needs_write():
-                enc_msg = tls.get_data()
-                self.socket.send(enc_msg)
+            sslw = SSLWrapper(self.socket, ident,
+                              self.LOG, self.proto,
+                              self.cert, self.key)
 
-                enc_req = self.socket.recv()
-                tls.put_data(enc_req)
-                tls.update()
+            rep = sslw.send_recv("first req: " + self.name)
+            self.LOG.info("Received: %s" % rep)
 
-            if tls.can_recv(): 
-                rep = tls.recv()
-                self.LOG.info("Received: %s" % rep)
-                break
+            #time.sleep(.2)        
+            rep = sslw.send_recv("second req: " + self.name)
+            self.LOG.info("Received: %s" % rep)
 
-        tls.shutdown()
+            self.socket.close()
+
+            sslw.shutdown()
+
         self.LOG.info("Client exited")
 

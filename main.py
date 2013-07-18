@@ -1,20 +1,16 @@
 import logging
 from StringIO import StringIO
+import time
+import zmq
 
+LOG_LEVEL = logging.INFO
 FORMAT = "%(name)s %(message)s"
 logging.basicConfig(format=FORMAT)
 
+CLIENT_COUNT = 100
+
 LOGS = logging.getLogger('SERVER')
-LOGS.setLevel(logging.DEBUG)
-
-LOGC1 = logging.getLogger('CLIENT')
-LOGC1.setLevel(logging.DEBUG)
-
-LOGC2 = logging.getLogger('CLIENT2')
-LOGC2.setLevel(logging.DEBUG)
-
-LOGC3 = logging.getLogger('CLIENT3')
-LOGC3.setLevel(logging.DEBUG)
+LOGS.setLevel(LOG_LEVEL)
 
 PROTOCOL = 'sslv3'  # or 'tlsv1'
 
@@ -24,22 +20,34 @@ from client import ZMQTLSClient
 
 def Main():
 
-    cert, key = ('server.crt', 'server.key')
+    print "=" * 50
+    print
+    print "=" * 50
+    cert, key, ca = ('CA/server.crt', 'CA/server.key', 'CA/ca.crt')
+    client_cert, client_key = ('CA/node.crt', 'CA/node.key')
+    #client_cert, client_key = (None, None)
     socket_uri = 'tcp://0.0.0.0:5556'
+    socket_uri = 'ipc:///tmp/zmqssl.sock'
 
-    server = ZMQTLSServer(LOGS, socket_uri, PROTOCOL, cert, key)
-    client1 = ZMQTLSClient('client1', LOGC1, socket_uri, PROTOCOL)
-    client2 = ZMQTLSClient('client2', LOGC2, socket_uri, PROTOCOL)
-    client3 = ZMQTLSClient('000012345678901234561234567890123456', LOGC3, socket_uri, PROTOCOL)
-
+    server = ZMQTLSServer(LOGS, socket_uri, PROTOCOL, cert, key, ca)
     server.start()
-    client1.start()
-    client2.start()
-    client3.start()
 
-    client1.join()
-    client2.join()
-    client3.join()
+    clients = []
+
+    ctx = zmq.Context(1)
+    for i in range(1, CLIENT_COUNT+1):
+        LOGC = logging.getLogger('Client %i' %i)
+        LOGC.setLevel(LOG_LEVEL)
+        client = ZMQTLSClient('client %i' % i, LOGC, socket_uri,
+                              PROTOCOL, ctx, client_cert, client_key)
+        clients.append(client)
+
+    for i in range(CLIENT_COUNT):
+        clients[i].start()
+        time.sleep(0.05)
+    for i in range(CLIENT_COUNT):
+        clients[i].join()
+
     server.join()
 
 
