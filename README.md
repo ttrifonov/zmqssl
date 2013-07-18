@@ -36,11 +36,14 @@ PROTOCOL = 'sslv3'  # or 'tlsv1'
 from server import ZMQTLSServer
 from client import ZMQTLSClient
 
-cert, key = ('server.crt', 'server.key')
+cert, key, ca = ('CA/server.crt', 'CA/server.key', 'CA/ca.crt')
+client_cert, client_key = ('CA/node.crt', 'CA/node.key')
+
 socket_uri = 'tcp://0.0.0.0:5556'
 
-server = ZMQTLSServer(LOGS, socket_uri, PROTOCOL, cert, key)
-client = ZMQTLSClient(LOGC, socket_uri, PROTOCOL)
+server = ZMQTLSServer(LOGS, socket_uri, PROTOCOL, cert, key, ca)
+client = ZMQTLSClient('clientId', LOGC, socket_uri, PROTOCOL,
+                      client_cert, client_key)
 
 server.start()
 client.start()

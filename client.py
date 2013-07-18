@@ -1,4 +1,3 @@
-import time
 from threading import Thread
 from tlszmq import TLSZmq
 import zmq
@@ -36,7 +35,7 @@ class SSLWrapper(object):
 
 class ZMQTLSClient(Thread):
 
-    def __init__(self, name, log, uri, proto, ctx, cert=None, key=None):
+    def __init__(self, name, log, uri, proto, cert=None, key=None, ctx=None):
         super(ZMQTLSClient, self).__init__()
 
         self.name = name
@@ -45,7 +44,7 @@ class ZMQTLSClient(Thread):
         self.cert = cert
         self.key = key
         self.uri = uri
-        self.ctx = ctx
+        self.ctx = ctx or zmq.Context(1)
 
     def run(self):
         subclients = 8
@@ -63,7 +62,6 @@ class ZMQTLSClient(Thread):
             rep = sslw.send_recv("first req: " + self.name)
             self.LOG.info("Received: %s" % rep)
 
-            #time.sleep(.2)        
             rep = sslw.send_recv("second req: " + self.name)
             self.LOG.info("Received: %s" % rep)
 

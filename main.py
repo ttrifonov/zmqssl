@@ -26,8 +26,9 @@ def Main():
     cert, key, ca = ('CA/server.crt', 'CA/server.key', 'CA/ca.crt')
     client_cert, client_key = ('CA/node.crt', 'CA/node.key')
     #client_cert, client_key = (None, None)
+    # Pass None for cert, key, if no client cert is used,
+    # but check the tlszmq for verify_peer flag
     socket_uri = 'tcp://0.0.0.0:5556'
-    socket_uri = 'ipc:///tmp/zmqssl.sock'
 
     server = ZMQTLSServer(LOGS, socket_uri, PROTOCOL, cert, key, ca)
     server.start()
@@ -39,7 +40,7 @@ def Main():
         LOGC = logging.getLogger('Client %i' %i)
         LOGC.setLevel(LOG_LEVEL)
         client = ZMQTLSClient('client %i' % i, LOGC, socket_uri,
-                              PROTOCOL, ctx, client_cert, client_key)
+                              PROTOCOL, client_cert, client_key, ctx=ctx)
         clients.append(client)
 
     for i in range(CLIENT_COUNT):
