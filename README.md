@@ -23,7 +23,14 @@ Run
 
 `python main.py`
 
-or see contents of `main.py`
+This starts *almost* simultaneosly 100 clients,
+each of them starts 8 different requests as different
+subclients, or a total of 800 requests running for about 10 sec
+on a not-so-fast laptop.
+Running more may lead to 'Too many open files', as the OS
+cannot close so fast the open socket files.
+
+Also see the contents of `main.py`
 
 
 ```python
