@@ -99,6 +99,8 @@ class TLSZmq(object):
             self.LOG.debug('%s written to BIO' % (rc))
         if self.app_to_ssl.len:
             rc = self.ssl.write(self.app_to_ssl.getvalue())
+            if not self.continue_ssl(rc):
+                raise Exception('SSL Error')
             if rc == self.app_to_ssl.len:
                 self.app_to_ssl.truncate(0)
             self.LOG.debug("%s written to SSL" % (rc))
@@ -106,12 +108,15 @@ class TLSZmq(object):
         self.net_read()
         self.net_write()
 
-    def continue_ssl(self):
-        # Not sure how to read the error here..
-        #err = m.m2.err_get_error() ??
-        #if err != ????
-        #    self.LOG.error(err)
-        #    return False
+    def continue_ssl(self, rc):
+        err = self.ssl.ssl_get_error(rc)
+        if err == 2:
+            # Negotiate, continue
+            return True
+        if err:
+            self.LOG.error("SSL Error: [%s] %s" % (err,
+                          (m.m2.err_reason_error_string(err))))
+            return False
         return True
 
     def net_read(self):
@@ -119,8 +124,6 @@ class TLSZmq(object):
             rc = self.ssl.read(self.BUF_LEN)
             if rc is None:
                 break
-            if not self.continue_ssl():
-                raise Exception('SSL Error')
             self.ssl_to_app.write(rc)
 
     def net_write(self):
